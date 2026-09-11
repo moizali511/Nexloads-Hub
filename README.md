@@ -105,3 +105,25 @@ Vite.
   `employees.department` in the SQL, plus the `DEPARTMENTS` list in
   `src/utils/departments.js` on the frontend — those two need to stay
   in sync.
+
+## v3 update — passwords, image attachments, live presence
+
+### What's new
+- **Employees can change their own password** (Settings tab on their dashboard) — needs their current password, same as before.
+- **Password fields everywhere now have a show/hide eye icon.**
+- **Admin can reset any employee's password** without knowing their old one (Employees tab → "Reset password" on their row). This is the safe alternative to storing/showing actual passwords — the database only ever stores a one-way hash, for everyone, no exceptions.
+- **Messages can carry an attached screenshot** — a closed deal, a payment receipt, anything. Employees can now also message admin directly (not just receive messages), with or without an image, right from their Messages tab. Admin sees these in the same Messaging screen, clearly labeled, with the image inline.
+- **Read receipts** — admin can see who has actually opened/seen each message ("Seen by 3 people", hover for names + times).
+- **Live online status + last login** — Employees tab now shows a green pulsing dot next to anyone currently active in the app, "Last seen …" otherwise, and their last login time. Updates automatically every ~15 seconds without reloading the page.
+
+### How to apply this to your already-live Supabase project
+You do **not** need a new Supabase project for this. `sql/schema.sql` in this zip is the full, updated file — safe to paste and run in full again on your existing database:
+- Every table uses `create table if not exists` and `alter table ... add column if not exists`, so existing tables just get the new columns added; nothing is dropped or wiped.
+- Every function uses `create or replace function`, and the one function whose parameters changed (`admin_send_message`) is explicitly dropped and recreated with the new signature first, so there's no repeat of the old function-overload bug.
+- Your existing employees, deals, messages, everything — all untouched.
+
+Steps:
+1. Supabase → SQL Editor → "+ New query".
+2. Paste the **entire** `sql/schema.sql` from this zip.
+3. Run it.
+4. Push these updated frontend files to your GitHub repo (same repo, same folder structure as before) and let Vercel redeploy automatically — or trigger a redeploy manually from the Vercel dashboard if it doesn't pick it up on its own.
