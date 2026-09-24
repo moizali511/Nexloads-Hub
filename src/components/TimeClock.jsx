@@ -99,6 +99,7 @@ export default function TimeClock({ employeeId }) {
               <span>{formatDateTime12h(l.clock_in)}</span>
               <span style={{ color: 'var(--text-muted)' }}>
                 {l.clock_out ? `→ ${formatTime12h(l.clock_out)}` : 'In progress'}
+                {l.clock_out_forced && ' (admin adjusted)'}
               </span>
             </div>
           ))}

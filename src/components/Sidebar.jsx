@@ -1,4 +1,5 @@
 import logo from '../assets/logos/logo-horizontal-transparent.png'
+import ThemeToggle from './ThemeToggle'
 
 export default function Sidebar({ user, tabs, active, onSelect, onLogout }) {
   return (
@@ -28,6 +29,9 @@ export default function Sidebar({ user, tabs, active, onSelect, onLogout }) {
       </div>
 
       <div>
+        <div style={{ marginBottom: 12 }}>
+          <ThemeToggle compact />
+        </div>
         <div style={{ fontSize: '0.85rem', marginBottom: 10 }}>{user.full_name}</div>
         <button className="btn-ghost" style={{ width: '100%' }} onClick={onLogout}>
           Sign out

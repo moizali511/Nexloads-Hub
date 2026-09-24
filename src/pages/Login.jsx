@@ -26,7 +26,11 @@ export default function Login({ onLogin }) {
       return
     }
     if (!data?.success) {
-      setError('Email or password is incorrect.')
+      if (data?.error === 'account_disabled') {
+        setError('This account is inactive or closed. Contact your admin.')
+      } else {
+        setError('Email or password is incorrect.')
+      }
       return
     }
 

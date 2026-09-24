@@ -3,6 +3,14 @@ import { supabase } from '../supabaseClient'
 import { DEPARTMENTS, departmentLabel } from '../utils/departments'
 import { formatDateTime12h } from '../utils/formatTime'
 import PasswordInput from './PasswordInput'
+import { presenceMeta, clockStatusLabel } from '../utils/presence'
+
+const EMPLOYMENT_STATUSES = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'on_leave', label: 'On leave' },
+  { value: 'closed', label: 'Closed' },
+]
 
 export default function EmployeeManager({ adminId, onSelectEmployee }) {
   const [employees, setEmployees] = useState([])
@@ -91,13 +99,32 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
     }
   }
 
-  async function toggleActive(emp) {
-    await supabase.rpc('admin_set_employee_active', {
+  async function setEmploymentStatus(emp, status) {
+    const reason = window.prompt(`Reason for changing ${emp.full_name} to ${status}? (optional)`) || ''
+    const { data, error: rpcError } = await supabase.rpc('admin_set_employment_status', {
       p_admin_id: adminId,
       p_employee_id: emp.id,
-      p_active: !emp.active,
+      p_status: status,
+      p_reason: reason,
     })
+    if (rpcError || !data?.success) {
+      if (status === 'active' || status === 'inactive') {
+        await supabase.rpc('admin_set_employee_active', {
+          p_admin_id: adminId,
+          p_employee_id: emp.id,
+          p_active: status === 'active',
+        })
+        load()
+        return
+      }
+      alert('Could not update status. Run sql/migrations/001_foundation_audit_presence_time.sql on Supabase.')
+      return
+    }
     load()
+  }
+
+  async function toggleActive(emp) {
+    await setEmploymentStatus(emp, emp.active ? 'inactive' : 'active')
   }
 
   async function deletePermanently(emp) {
@@ -292,7 +319,10 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
           const isExpanded = expandedId === emp.id
           const isResetting = resetPasswordId === emp.id
           const live = presence[emp.id]
-          const isOnline = live?.is_online || false
+          const presenceState = live?.presence_state || (live?.is_online ? 'online' : 'offline')
+          const pMeta = presenceMeta(presenceState)
+          const isClockedIn = live?.is_clocked_in
+          const employmentStatus = emp.employment_status || (emp.active ? 'active' : 'inactive')
           return (
             <div key={emp.id} style={row}>
               <div style={{ flex: 1, minWidth: 240 }}>
@@ -308,20 +338,23 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
                   onMouseLeave={(e) => (e.currentTarget.style.textDecorationColor = 'transparent')}
                   title="View this employee's full profile"
                 >
-                  <span className={`status-dot ${isOnline ? 'online' : 'offline'}`} title={isOnline ? 'Online now' : 'Offline'} />
+                  <span className={`status-dot ${pMeta.dotClass}`} title={pMeta.label} aria-hidden />
                   {emp.full_name}
                   {emp.role === 'admin' && <span className="pill">Admin</span>}
-                  {!emp.active && <span className="pill" style={{ background: 'rgba(255,92,92,0.14)', color: 'var(--danger)', borderColor: 'rgba(255,92,92,0.28)' }}>Inactive</span>}
+                  {employmentStatus !== 'active' && (
+                    <span className="pill" style={{ background: 'rgba(255,92,92,0.14)', color: 'var(--danger)', borderColor: 'rgba(255,92,92,0.28)' }}>
+                      {EMPLOYMENT_STATUSES.find((s) => s.value === employmentStatus)?.label || employmentStatus}
+                    </span>
+                  )}
                 </button>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
                   {emp.position || 'Dispatcher'} · {departmentLabel(emp.department)} · {emp.email}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: isOnline ? '#3ddc84' : 'var(--text-muted)', marginTop: 2 }}>
-                  {isOnline
-                    ? 'Online now'
-                    : live?.last_seen_at
-                      ? `Last seen ${formatDateTime12h(live.last_seen_at)}`
-                      : 'Never logged in'}
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  <span title="Online presence">{pMeta.emoji} {pMeta.label}</span>
+                  {' · '}
+                  <span title="Time clock">{clockStatusLabel(isClockedIn)}</span>
+                  {live?.last_seen_at && presenceState === 'offline' && ` · Last seen ${formatDateTime12h(live.last_seen_at)}`}
                   {live?.last_login_at && ` · Last login ${formatDateTime12h(live.last_login_at)}`}
                 </div>
 
@@ -403,6 +436,17 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
                     <button className="btn-primary" style={{ padding: '6px 10px', fontSize: '0.78rem' }} disabled={savingRoleId === emp.id} onClick={() => saveRoleInfo(emp)}>
                       {savingRoleId === emp.id ? 'Saving…' : 'Save role settings'}
                     </button>
+                    <div>
+                      <label style={fieldLabel}>Employment status</label>
+                      <select
+                        value={employmentStatus}
+                        onChange={(e) => setEmploymentStatus(emp, e.target.value)}
+                      >
+                        {EMPLOYMENT_STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
