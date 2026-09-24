@@ -22,26 +22,16 @@ export function ThemeProvider({ children }) {
 
   const resolved = useMemo(() => {
     if (preference === 'system') return resolveSystemTheme()
-    return preference
+    if (preference === 'dark') return 'dark'
+    return 'light'
   }, [preference])
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', resolved)
     try {
       localStorage.setItem(STORAGE_KEY, preference)
     } catch {
       /* ignore */
     }
-  }, [preference, resolved])
-
-  useEffect(() => {
-    if (preference !== 'system') return undefined
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = () => {
-      document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light')
-    }
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
   }, [preference])
 
   const value = useMemo(

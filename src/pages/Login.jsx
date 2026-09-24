@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../supabaseClient'
 import PasswordInput from '../components/PasswordInput'
 import logo from '../assets/logos/logo-horizontal-transparent.png'
 
 export default function Login({ onLogin }) {
+  const { resolved } = useTheme()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -38,7 +40,7 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={styles.wrap}>
+    <div className="login-page" data-theme={resolved} style={styles.wrap}>
       <div style={styles.glow} />
       <form onSubmit={handleSubmit} className="card glass-panel" style={styles.card}>
         <div style={styles.logoRow}>

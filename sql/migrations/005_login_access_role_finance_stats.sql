@@ -125,3 +125,7 @@ begin
   ));
 end;
 $$;
+
+grant execute on function login_employee(text, text) to anon;
+grant execute on function admin_dashboard_stats(uuid, date, date) to anon;
+grant execute on function admin_list_employees(uuid) to anon;

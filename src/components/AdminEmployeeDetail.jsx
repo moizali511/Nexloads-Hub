@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { formatDateTime12h, formatTime12h } from '../utils/formatTime'
 import { departmentLabel } from '../utils/departments'
 import MonthlyProgressChart from './MonthlyProgressChart'
+import AdminEmployeeWorkspace from './AdminEmployeeWorkspace'
 
 export default function AdminEmployeeDetail({ adminId, employee, onBack }) {
   const [timelogs, setTimelogs] = useState([])
@@ -91,6 +92,8 @@ export default function AdminEmployeeDetail({ adminId, employee, onBack }) {
           </div>
         </div>
       </div>
+
+      <AdminEmployeeWorkspace adminId={adminId} employeeId={employee.id} />
 
       <MonthlyProgressChart callerId={adminId} employeeId={employee.id} title="Monthly progress" />
 

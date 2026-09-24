@@ -28,9 +28,11 @@ import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
 import { presenceMeta } from '../utils/presence'
 import { CLIENT_STATUSES, LOAD_STATUSES, TRUCK_STATUSES, DRIVER_STATUSES } from '../utils/crmConstants'
 import { canAccessAdminTab, canUseGlobalSearch, getAdminTabs } from '../utils/navigation'
+import { useAlertPoller } from '../context/AlertPollerContext'
 import { useGuardedTab } from '../hooks/useGuardedTab'
 
 export default function AdminDashboard({ user, onLogout }) {
+  const { clockedIn } = useAlertPoller()
   const [tab, setTab] = useState('overview')
   const [timelogs, setTimelogs] = useState([])
   const [employees, setEmployees] = useState([])
@@ -58,8 +60,20 @@ export default function AdminDashboard({ user, onLogout }) {
     setTab('employeeDetail')
   }
 
-  function onGlobalNavigate(result) {
-    const map = { lead: 'leads', client: 'clients', load: 'loads', broker: 'brokers', employee: 'employees' }
+  async function onGlobalNavigate(result) {
+    if (result.type === 'employee') {
+      let emp = employees.find((e) => e.id === result.id)
+      if (!emp) {
+        const { data } = await supabase.rpc('admin_get_employee_workspace', {
+          p_admin_id: user.id,
+          p_employee_id: result.id,
+        })
+        if (data?.success) emp = data.employee
+      }
+      if (emp) openEmployeeDetail(emp)
+      return
+    }
+    const map = { lead: 'leads', client: 'clients', load: 'loads', broker: 'brokers' }
     if (map[result.type]) setTab(map[result.type])
   }
 
@@ -80,7 +94,16 @@ export default function AdminDashboard({ user, onLogout }) {
       activeTab={tab}
       onSelectTab={setTab}
       onLogout={onLogout}
-      topBarExtra={<NotificationCenter employeeId={user.id} />}
+      topBarExtra={
+        <>
+          {!clockedIn && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginRight: 8 }} title="Clock in to get sound and desktop alerts">
+              Alerts off until clocked in
+            </span>
+          )}
+          <NotificationCenter employeeId={user.id} />
+        </>
+      }
     >
         <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>
           Admin — {user.full_name.split(' ')[0]}

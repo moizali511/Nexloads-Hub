@@ -1,5 +1,6 @@
 :root,
-html[data-theme='light'] {
+.login-page[data-theme='light'],
+.dashboard-content[data-theme='light'] {
   --bg-void: #f4f2ef;
   --bg-panel: #ffffff;
   --bg-panel-raised: #f8f7f5;
@@ -22,7 +23,8 @@ html[data-theme='light'] {
   color-scheme: light;
 }
 
-html[data-theme='dark'] {
+.login-page[data-theme='dark'],
+.dashboard-content[data-theme='dark'] {
   --bg-void: #0a0a0b;
   --bg-panel: #141416;
   --bg-panel-raised: #1c1c1f;
@@ -348,6 +350,55 @@ select option {
   flex-shrink: 0;
 }
 
+/* Left nav: always dark — independent of main panel theme */
+.sidebar.sidebar-dark {
+  --sb-bg: #0c0c0e;
+  --sb-raised: #18181b;
+  --sb-border: #2a2a2e;
+  --sb-text: #f4f3f0;
+  --sb-muted: #9a9aa3;
+  background: var(--sb-bg);
+  border-right-color: var(--sb-border);
+  color: var(--sb-text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.sidebar-dark .sidebar-header,
+.sidebar-dark .sidebar-footer {
+  border-color: var(--sb-border);
+}
+
+.sidebar-dark .sidebar-subtitle,
+.sidebar-dark .sidebar-user {
+  color: var(--sb-muted);
+}
+
+.sidebar-dark .sidebar-nav-btn {
+  color: var(--sb-muted);
+}
+
+.sidebar-dark .sidebar-nav-btn:hover {
+  color: var(--sb-text);
+  background: var(--sb-raised);
+}
+
+.sidebar-dark .sidebar-nav-btn.active {
+  color: var(--sb-text);
+  background: rgba(255, 138, 61, 0.18);
+  font-weight: 600;
+}
+
+.sidebar-dark .sidebar-signout.btn-ghost {
+  color: var(--sb-muted);
+  border-color: var(--sb-border);
+}
+
+.sidebar-dark .sidebar-collapse-btn {
+  color: var(--sb-muted);
+  border-color: var(--sb-border);
+}
+
 .sidebar-header {
   display: flex;
   align-items: flex-start;
@@ -452,6 +503,32 @@ select option {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  background: var(--bg-void);
+  color: var(--text-primary);
+}
+
+.alert-toast-stack {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.alert-toast {
+  pointer-events: auto;
+  padding: 12px 14px !important;
+  animation: toast-slide-in 0.28s ease;
+  border-left: 3px solid var(--orange-1);
+}
+
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .dashboard-topbar {

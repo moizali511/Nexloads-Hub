@@ -24,7 +24,7 @@ export default function GlobalSearch({ callerId, onNavigate }) {
     <div className="global-search" style={{ position: 'relative', marginBottom: 16, maxWidth: 520 }}>
       <input
         type="search"
-        placeholder="Search employees, leads, clients, loads…"
+        placeholder="Search employee name, leads, clients, loads…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && search()}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
 import TimeClock from '../components/TimeClock'
 import UpdatesFeed from '../components/UpdatesFeed'
@@ -9,11 +9,7 @@ import PerformancePanel from '../components/PerformancePanel'
 import TeamOverviewPanel from '../components/TeamOverviewPanel'
 import MonthlyProgressChart from '../components/MonthlyProgressChart'
 import ChangeMyPassword from '../components/ChangeMyPassword'
-import { supabase } from '../supabaseClient'
-import { playNotificationSound } from '../utils/notifySound'
 import { departmentLabel } from '../utils/departments'
-import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
-import { useGuardedTab } from '../hooks/useGuardedTab'
 import NotificationCenter from '../components/NotificationCenter'
 import LeadsPanel from '../modules/LeadsPanel'
 import FollowUpsPanel from '../modules/FollowUpsPanel'
@@ -22,64 +18,31 @@ import TeamChatPanel from '../modules/TeamChatPanel'
 import TasksPanel from '../modules/TasksPanel'
 import CrudModule from '../modules/CrudModule'
 import RevenuePanel from '../modules/RevenuePanel'
+import { useAlertPoller } from '../context/AlertPollerContext'
+import { useGuardedTab } from '../hooks/useGuardedTab'
 import {
   canAccessEmployeeTab,
   getEmployeeTabs,
 } from '../utils/navigation'
 import { CLIENT_STATUSES, LOAD_STATUSES, TRUCK_STATUSES, DRIVER_STATUSES } from '../utils/crmConstants'
 
-const POLL_MS = 8000
-
 export default function EmployeeDashboard({ user, onLogout }) {
   const [tab, setTab] = useState('overview')
-  const [messages, setMessages] = useState([])
-  const [newIds, setNewIds] = useState(new Set())
-  const seenIdsRef = useRef(null)
+  const { legacyMessages, newMessageIds, clearNewMessages, clockedIn, refresh } = useAlertPoller()
 
   const tabs = useMemo(
     () => getEmployeeTabs(user, {
-      messages: `Legacy${newIds.size > 0 ? ` (${newIds.size})` : ''}`,
+      messages: `Legacy${newMessageIds.size > 0 ? ` (${newMessageIds.size})` : ''}`,
     }),
-    [user, newIds.size],
+    [user, newMessageIds.size],
   )
 
   useGuardedTab(tab, tabs.map((t) => t.key), setTab)
 
-  useEffect(() => {
-    loadMessages()
-    const interval = setInterval(loadMessages, POLL_MS)
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  usePresenceHeartbeat(user.id)
-
-  async function loadMessages() {
-    const { data } = await supabase.rpc('get_my_messages', { p_employee_id: user.id })
-    const list = data || []
-
-    if (seenIdsRef.current === null) {
-      seenIdsRef.current = new Set(list.map((m) => m.id))
-    } else {
-      const fresh = list.filter((m) => !seenIdsRef.current.has(m.id))
-      if (fresh.length > 0) {
-        playNotificationSound()
-        setNewIds((prev) => {
-          const next = new Set(prev)
-          fresh.forEach((m) => next.add(m.id))
-          return next
-        })
-        fresh.forEach((m) => seenIdsRef.current.add(m.id))
-      }
-    }
-    setMessages(list)
-  }
-
   function openMessagesTab() {
     if (!canAccessEmployeeTab(user, 'messages')) return
     setTab('messages')
-    setNewIds(new Set())
-    supabase.rpc('mark_all_messages_read', { p_employee_id: user.id })
+    clearNewMessages()
   }
 
   function guard(key, content) {
@@ -94,7 +57,16 @@ export default function EmployeeDashboard({ user, onLogout }) {
       activeTab={tab}
       onSelectTab={(key) => (key === 'messages' ? openMessagesTab() : setTab(key))}
       onLogout={onLogout}
-      topBarExtra={<NotificationCenter employeeId={user.id} />}
+      topBarExtra={
+        <>
+          {!clockedIn && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginRight: 8 }} title="Clock in to get sound and desktop alerts">
+              Alerts off until clocked in
+            </span>
+          )}
+          <NotificationCenter employeeId={user.id} />
+        </>
+      }
     >
       <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0, marginBottom: 4 }}>
         Welcome, {user.full_name.split(' ')[0]}
@@ -237,7 +209,12 @@ export default function EmployeeDashboard({ user, onLogout }) {
 
       {guard('messages', (
         <div style={{ maxWidth: 720 }}>
-          <EmployeeMessages employeeId={user.id} messages={messages} newIds={newIds} onSent={loadMessages} />
+          <EmployeeMessages
+            employeeId={user.id}
+            messages={legacyMessages}
+            newIds={newMessageIds}
+            onSent={() => refresh()}
+          />
         </div>
       ))}
 

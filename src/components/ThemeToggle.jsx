@@ -3,7 +3,6 @@ import { useTheme } from '../context/ThemeContext'
 const OPTIONS = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
 ]
 
 export default function ThemeToggle({ compact = false }) {

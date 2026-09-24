@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { formatDateTime12h, formatTime12h } from '../utils/formatTime'
+import { ensureNotificationPermission } from '../utils/desktopNotify'
 
 export default function TimeClock({ employeeId }) {
   const [logs, setLogs] = useState([])
@@ -23,6 +24,7 @@ export default function TimeClock({ employeeId }) {
   async function handleClockIn() {
     setBusy(true)
     await supabase.rpc('clock_in', { p_employee_id: employeeId })
+    await ensureNotificationPermission()
     await loadLogs()
     setBusy(false)
   }

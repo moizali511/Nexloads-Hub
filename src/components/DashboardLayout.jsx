@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Sidebar from './Sidebar'
 import ThemeToggle from './ThemeToggle'
+import { useTheme } from '../context/ThemeContext'
 
 export default function DashboardLayout({
   user,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const [navOpen, setNavOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const { resolved } = useTheme()
 
   return (
     <div className={`dashboard-shell${sidebarCollapsed ? ' sidebar-is-collapsed' : ''}${navOpen ? ' mobile-nav-open' : ''}`}>
@@ -33,7 +35,7 @@ export default function DashboardLayout({
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
       />
-      <div className="dashboard-content">
+      <div className="dashboard-content" data-theme={resolved}>
         <header className="dashboard-topbar">
           <button
             type="button"

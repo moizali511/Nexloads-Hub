@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Login from './pages/Login'
 import EmployeeDashboard from './pages/EmployeeDashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import { AlertPollerProvider } from './context/AlertPollerContext'
 
 const STORAGE_KEY = 'nexloads_hub_session'
 
@@ -42,9 +43,13 @@ export default function App() {
 
   if (!user) return <Login onLogin={handleLogin} />
 
-  if (user.role === 'admin') {
-    return <AdminDashboard user={user} onLogout={handleLogout} />
-  }
-
-  return <EmployeeDashboard user={user} onLogout={handleLogout} />
+  return (
+    <AlertPollerProvider employeeId={user.id}>
+      {user.role === 'admin' ? (
+        <AdminDashboard user={user} onLogout={handleLogout} />
+      ) : (
+        <EmployeeDashboard user={user} onLogout={handleLogout} />
+      )}
+    </AlertPollerProvider>
+  )
 }

@@ -10,7 +10,7 @@ export default function Sidebar({
   onToggleCollapse,
 }) {
   return (
-    <aside className="sidebar glass-panel">
+    <aside className="sidebar sidebar-dark">
       <div className="sidebar-header">
         <div className="sidebar-brand">
           <img src={logo} alt="Nexloads Hub" className="sidebar-logo" />
