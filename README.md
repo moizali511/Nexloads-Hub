@@ -127,3 +127,29 @@ Steps:
 2. Paste the **entire** `sql/schema.sql` from this zip.
 3. Run it.
 4. Push these updated frontend files to your GitHub repo (same repo, same folder structure as before) and let Vercel redeploy automatically — or trigger a redeploy manually from the Vercel dashboard if it doesn't pick it up on its own.
+
+## Migration 001 — audit log, presence, admin time control
+
+For **existing** Supabase projects, run **`sql/migrations/001_foundation_audit_presence_time.sql`** once in the SQL Editor (in addition to your current schema). It adds:
+
+- `audit_logs` + admin audit viewer in the CRM
+- Separate **online / away / offline** presence (heartbeat + tab visibility)
+- **Clocked-in** flag independent of online status
+- **Employment status** (`active`, `inactive`, `on_leave`, `closed`)
+- **Admin force clock-out** with required reason + audit entry
+
+The frontend defaults to **light mode** with optional dark/system theme (Settings → Appearance).
+
+## Migrations 002 & 003 — full CRM + team chat
+
+Run in order on Supabase SQL Editor:
+
+1. `sql/migrations/001_foundation_audit_presence_time.sql`
+2. `sql/migrations/002_core_crm.sql` — leads, clients, loads, brokers, ops trucks/drivers, calls, follow-ups, tasks, documents, notifications, global search, dashboard stats, RBAC `access_role`
+3. `sql/migrations/003_team_chat.sql` — channels, DMs, groups, admin message moderation with audit
+
+**Existing modules preserved:** Deals, cold-caller fleets/trucks, payroll, legacy admin↔employee messages, time clock, team updates.
+
+**New admin areas:** Control center, leads pipeline, operations (clients/loads/trucks/drivers/brokers), revenue, tasks, team chat, expanded overview with date filters.
+
+VoIP and external integrations use `src/services/integrations/` stubs until credentials are configured — no fake live integrations.
