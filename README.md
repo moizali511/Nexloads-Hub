@@ -153,3 +153,20 @@ Run in order on Supabase SQL Editor:
 **New admin areas:** Control center, leads pipeline, operations (clients/loads/trucks/drivers/brokers), revenue, tasks, team chat, expanded overview with date filters.
 
 VoIP and external integrations use `src/services/integrations/` stubs until credentials are configured — no fake live integrations.
+
+## Migrations 004–006 — RBAC menus, alerts, admin employee intel
+
+Run after 001–003 (see **`sql/migrations/README.md`** for the full ordered list):
+
+4. `sql/migrations/004_message_edit_delete_policy.sql`
+5. `sql/migrations/005_login_access_role_finance_stats.sql` — session `access_role`, finance/manager revenue RPC
+6. `sql/migrations/006_admin_employee_workspace_search.sql` — admin work snapshot + employee search
+
+### Frontend (this repo)
+
+- **Role-based sidebar** — `src/utils/navigation.js`; set **Hub menu permissions** per employee in Admin → Employees.
+- **Fixed dark left sidebar**; **Light/Dark** toggle affects only the main panel (top right).
+- **Alerts when clocked in** — CRM notifications, legacy messages, team chat: sound + OS notification + in-app toast (`AlertPollerContext`).
+- **Admin search** — global search by employee name opens profile with **Work snapshot** (tasks, follow-ups, activity).
+
+Redeploy Vercel after pulling; run SQL on Supabase; have staff **re-login** once.
