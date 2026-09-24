@@ -49,6 +49,20 @@ export default function AdminMessaging({ adminId, employees }) {
     load()
   }
 
+  async function handleEdit(m) {
+    const newBody = window.prompt('Edit message text:', m.body || '')
+    if (!newBody || newBody === m.body) return
+    const reason = window.prompt('Reason (audit log):', '') || ''
+    const { data } = await supabase.rpc('admin_edit_message', {
+      p_admin_id: adminId,
+      p_message_id: m.id,
+      p_new_body: newBody,
+      p_reason: reason,
+    })
+    if (!data?.success) alert('Could not edit. Run migration 004 on Supabase.')
+    else load()
+  }
+
   async function handleDelete(id) {
     if (!window.confirm('Delete this message for everyone who can see it?')) return
     const { data, error: rpcError } = await supabase.rpc('admin_delete_message', { p_admin_id: adminId, p_message_id: id })
@@ -152,9 +166,10 @@ export default function AdminMessaging({ adminId, employees }) {
                 )}
                 {' · '}{new Date(m.created_at).toLocaleString()}
               </div>
-              <button className="btn-ghost" style={{ color: 'var(--danger)', borderColor: 'transparent', whiteSpace: 'nowrap' }} onClick={() => handleDelete(m.id)}>
-                Delete
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button type="button" className="btn-ghost msg-action-btn" onClick={() => handleEdit(m)}>Edit</button>
+                <button type="button" className="btn-ghost msg-action-btn danger-text" onClick={() => handleDelete(m.id)}>Delete</button>
+              </div>
             </div>
             {m.body && <div style={{ marginTop: 3 }}>{m.body}</div>}
             {m.image_data && (

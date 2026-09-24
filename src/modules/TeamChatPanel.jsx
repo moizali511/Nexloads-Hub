@@ -59,11 +59,17 @@ export default function TeamChatPanel({ employeeId, isAdmin, employees = [] }) {
     }
   }
 
-  async function adminEdit(msg) {
-    if (!isAdmin) return
-    const newBody = window.prompt('Corrected message text:', msg.body)
-    if (!newBody) return
-    const reason = window.prompt('Reason for edit (audit):', '') || ''
+  function canEdit(msg) {
+    return msg.sender_id === employeeId || isAdmin
+  }
+
+  async function editMessage(msg) {
+    if (!canEdit(msg)) return
+    const newBody = window.prompt('Edit message:', msg.body)
+    if (!newBody || newBody === msg.body) return
+    const reason = isAdmin && msg.sender_id !== employeeId
+      ? (window.prompt('Reason for admin edit (audit):', '') || '')
+      : ''
     await supabase.rpc('chat_edit_message', {
       p_actor_id: employeeId,
       p_message_id: msg.id,
@@ -73,36 +79,38 @@ export default function TeamChatPanel({ employeeId, isAdmin, employees = [] }) {
     loadMessages()
   }
 
-  async function adminDelete(msg) {
+  async function deleteMessage(msg) {
+    if (!isAdmin) return
     const reason = window.prompt('Reason for deletion (audit):', '') || ''
-    await supabase.rpc('chat_delete_message', {
+    const { data } = await supabase.rpc('chat_delete_message', {
       p_actor_id: employeeId,
       p_message_id: msg.id,
       p_reason: reason,
     })
+    if (!data?.success) alert('Could not delete. Run migration 004 on Supabase if delete is admin-only.')
     loadMessages()
   }
 
   const activeRoom = rooms.find((r) => r.id === roomId)
 
   return (
-    <div className="card" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, minHeight: 420 }}>
-      <div>
+    <div className="card chat-panel-grid">
+      <div className="chat-rooms-column">
         <h3 className="card-title">Channels</h3>
-        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="chat-room-list scrollbar-thin">
           {rooms.map((r) => (
             <button
               key={r.id}
               type="button"
-              className={`theme-toggle-btn${roomId === r.id ? ' active' : ''}`}
-              style={{ textAlign: 'left', width: '100%' }}
+              className={`sidebar-nav-btn${roomId === r.id ? ' active' : ''}`}
+              style={{ width: '100%' }}
               onClick={() => setRoomId(r.id)}
             >
               {r.name}{r.unread_count > 0 ? ` (${r.unread_count})` : ''}
             </button>
           ))}
         </div>
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 12 }}>
           <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Direct message</label>
           <select value={dmTarget} onChange={(e) => setDmTarget(e.target.value)}>
             <option value="">Select employee</option>
@@ -110,28 +118,40 @@ export default function TeamChatPanel({ employeeId, isAdmin, employees = [] }) {
               <option key={e.id} value={e.id}>{e.full_name}</option>
             ))}
           </select>
-          <button type="button" className="btn-ghost" style={{ width: '100%', marginTop: 6 }} onClick={startDm}>Open DM</button>
+          <button type="button" className="btn-ghost" style={{ width: '100%', marginTop: 6 }} onClick={startDm}>
+            Open DM
+          </button>
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 360 }}>
+      <div className="chat-thread-column">
         <div style={{ fontWeight: 600, marginBottom: 8 }}>{activeRoom?.name || 'Chat'}</div>
-        <div className="scrollbar-thin" style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border-soft)', borderRadius: 12, padding: 12 }}>
+        <div className="chat-messages scrollbar-thin">
           {messages.map((m) => (
-            <div key={m.id} style={{ marginBottom: 12, fontSize: '0.88rem' }}>
-              <div style={{ fontWeight: 600 }}>{m.sender_name}{m.edited_at ? ' (edited)' : ''}</div>
-              <div>{m.body}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{formatDateTime12h(m.created_at)}</div>
-              {isAdmin && (
-                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                  <button type="button" className="btn-ghost" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => adminEdit(m)}>Edit</button>
-                  <button type="button" className="btn-ghost" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => adminDelete(m)}>Delete</button>
-                </div>
-              )}
+            <div key={m.id} className="chat-message-bubble">
+              <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                {m.sender_name}{m.edited_at ? ' · edited' : ''}
+              </div>
+              <div style={{ marginTop: 4 }}>{m.body}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                {formatDateTime12h(m.created_at)}
+              </div>
+              <div className="chat-message-actions">
+                {canEdit(m) && (
+                  <button type="button" className="btn-ghost msg-action-btn" onClick={() => editMessage(m)}>
+                    Edit
+                  </button>
+                )}
+                {isAdmin && (
+                  <button type="button" className="btn-ghost msg-action-btn danger-text" onClick={() => deleteMessage(m)}>
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
-        <form onSubmit={send} style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-          <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message…" />
+        <form onSubmit={send} className="chat-compose">
+          <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a message…" />
           <button type="submit" className="btn-primary">Send</button>
         </form>
       </div>

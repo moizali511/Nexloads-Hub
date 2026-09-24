@@ -5,6 +5,15 @@ import { formatDateTime12h } from '../utils/formatTime'
 import PasswordInput from './PasswordInput'
 import { presenceMeta, clockStatusLabel } from '../utils/presence'
 
+const ACCESS_ROLES = [
+  { value: 'employee', label: 'General employee (design, social, etc.)' },
+  { value: 'cold_caller', label: 'Cold caller — leads & calls' },
+  { value: 'dispatcher', label: 'Dispatcher — loads & clients' },
+  { value: 'team_leader', label: 'Team leader — team + sales oversight' },
+  { value: 'manager', label: 'Manager — broad ops & revenue' },
+  { value: 'finance', label: 'Finance — revenue & payroll views' },
+]
+
 const EMPLOYMENT_STATUSES = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
@@ -155,7 +164,12 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
   }
 
   async function saveRoleInfo(emp) {
-    const draft = roleEdits[emp.id] || { position: emp.position, department: emp.department, manager_id: emp.manager_id || '' }
+    const draft = roleEdits[emp.id] || {
+      position: emp.position,
+      department: emp.department,
+      manager_id: emp.manager_id || '',
+      access_role: emp.access_role || 'employee',
+    }
     setSavingRoleId(emp.id)
     await supabase.rpc('admin_update_employee_role_info', {
       p_admin_id: adminId, p_employee_id: emp.id,
@@ -163,6 +177,13 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
       p_department: draft.department,
       p_manager_id: draft.manager_id || null,
     })
+    if (emp.role !== 'admin' && draft.access_role) {
+      await supabase.rpc('admin_update_access_role', {
+        p_admin_id: adminId,
+        p_employee_id: emp.id,
+        p_access_role: draft.access_role,
+      })
+    }
     setSavingRoleId(null)
     load()
   }
@@ -315,7 +336,12 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
         )}
         {employees.map((emp) => {
           const salaryDraft = salaryEdits[emp.id] || { amount: emp.base_salary, currency: emp.base_salary_currency }
-          const roleDraft = roleEdits[emp.id] || { position: emp.position, department: emp.department, manager_id: emp.manager_id || '' }
+          const roleDraft = roleEdits[emp.id] || {
+            position: emp.position,
+            department: emp.department,
+            manager_id: emp.manager_id || '',
+            access_role: emp.access_role || 'employee',
+          }
           const isExpanded = expandedId === emp.id
           const isResetting = resetPasswordId === emp.id
           const live = presence[emp.id]
@@ -348,7 +374,9 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
                   )}
                 </button>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                  {emp.position || 'Dispatcher'} · {departmentLabel(emp.department)} · {emp.email}
+                  {emp.position || 'Dispatcher'} · {departmentLabel(emp.department)}
+                  {emp.access_role && emp.access_role !== 'employee' && ` · Hub: ${ACCESS_ROLES.find((r) => r.value === emp.access_role)?.label?.split(' — ')[0] || emp.access_role}`}
+                  {' · '}{emp.email}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                   <span title="Online presence">{pMeta.emoji} {pMeta.label}</span>
@@ -433,6 +461,22 @@ export default function EmployeeManager({ adminId, onSelectEmployee }) {
                         ))}
                       </select>
                     </div>
+                    {emp.role !== 'admin' && (
+                      <div>
+                        <label style={fieldLabel}>Hub menu permissions</label>
+                        <select
+                          value={roleDraft.access_role}
+                          onChange={(e) => setRoleEdits({ ...roleEdits, [emp.id]: { ...roleDraft, access_role: e.target.value } })}
+                        >
+                          {ACCESS_ROLES.map((r) => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                          Controls which sidebar tabs they see. Department still applies if this is &quot;General employee&quot;.
+                        </div>
+                      </div>
+                    )}
                     <button className="btn-primary" style={{ padding: '6px 10px', fontSize: '0.78rem' }} disabled={savingRoleId === emp.id} onClick={() => saveRoleInfo(emp)}>
                       {savingRoleId === emp.id ? 'Saving…' : 'Save role settings'}
                     </button>

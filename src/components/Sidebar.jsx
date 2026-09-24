@@ -1,70 +1,59 @@
 import logo from '../assets/logos/logo-horizontal-transparent.png'
-import ThemeToggle from './ThemeToggle'
 
-export default function Sidebar({ user, tabs, active, onSelect, onLogout }) {
+export default function Sidebar({
+  user,
+  tabs,
+  active,
+  onSelect,
+  onLogout,
+  collapsed = false,
+  onToggleCollapse,
+}) {
   return (
-    <div className="sidebar glass-panel" style={styles.wrap}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-          <img src={logo} alt="Nexloads Hub" style={{ height: 40, width: 'auto' }} />
+    <aside className="sidebar glass-panel">
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <img src={logo} alt="Nexloads Hub" className="sidebar-logo" />
+          {!collapsed && (
+            <div className="sidebar-brand-text">
+              <span className="brand-mark" style={{ fontSize: '0.95rem' }}>Nexloads Hub</span>
+              <span className="sidebar-subtitle">
+                {user.role === 'admin' ? 'Admin' : (user.position || 'Employee')}
+              </span>
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 32 }}>
-          {user.role === 'admin' ? 'Admin dashboard' : (user.position || 'Dispatch dashboard')}
-        </div>
-
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => onSelect(t.key)}
-              style={{
-                ...styles.navBtn,
-                ...(active === t.key ? styles.navBtnActive : {}),
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      <div>
-        <div style={{ marginBottom: 12 }}>
-          <ThemeToggle compact />
-        </div>
-        <div style={{ fontSize: '0.85rem', marginBottom: 10 }}>{user.full_name}</div>
-        <button className="btn-ghost" style={{ width: '100%' }} onClick={onLogout}>
-          Sign out
+        <button
+          type="button"
+          className="sidebar-collapse-btn btn-ghost"
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? '»' : '«'}
         </button>
       </div>
-    </div>
-  )
-}
 
-const styles = {
-  wrap: {
-    width: 220,
-    flexShrink: 0,
-    borderRight: '1px solid var(--border-soft)',
-    padding: '1.5rem 1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    height: '100vh',
-    position: 'sticky',
-    top: 0,
-  },
-  navBtn: {
-    textAlign: 'left',
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--text-muted)',
-    padding: '0.6rem 0.75rem',
-    borderRadius: 8,
-    fontSize: '0.9rem',
-  },
-  navBtnActive: {
-    background: 'var(--bg-panel-raised)',
-    color: 'var(--text-primary)',
-  },
+      <nav className="sidebar-nav scrollbar-thin" aria-label="Main navigation">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => onSelect(t.key)}
+            className={`sidebar-nav-btn${active === t.key ? ' active' : ''}`}
+            title={collapsed ? t.label : undefined}
+          >
+            {collapsed ? t.label.charAt(0) : t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="sidebar-footer">
+        {!collapsed && <div className="sidebar-user">{user.full_name}</div>}
+        <button type="button" className="btn-ghost sidebar-signout" onClick={onLogout}>
+          {collapsed ? 'Out' : 'Sign out'}
+        </button>
+      </div>
+    </aside>
+  )
 }

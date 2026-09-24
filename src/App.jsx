@@ -28,6 +28,8 @@ export default function App() {
       position: data.position,
       department: data.department,
       manager_id: data.manager_id,
+      access_role: data.access_role,
+      employment_status: data.employment_status,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser))
     setUser(sessionUser)

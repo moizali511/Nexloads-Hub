@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import Sidebar from '../components/Sidebar'
+import { useEffect, useMemo, useState } from 'react'
+import DashboardLayout from '../components/DashboardLayout'
 import UpdatesFeed from '../components/UpdatesFeed'
 import EmployeeManager from '../components/EmployeeManager'
 import ChangePasswordCard from '../components/ChangePasswordModal'
@@ -26,39 +26,23 @@ import { supabase } from '../supabaseClient'
 import { formatDateTime12h, formatTime12h } from '../utils/formatTime'
 import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
 import { presenceMeta } from '../utils/presence'
-import ThemeToggle from '../components/ThemeToggle'
 import { CLIENT_STATUSES, LOAD_STATUSES, TRUCK_STATUSES, DRIVER_STATUSES } from '../utils/crmConstants'
-
-const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'control', label: 'Control center' },
-  { key: 'employees', label: 'Employees' },
-  { key: 'leads', label: 'Leads' },
-  { key: 'calls', label: 'Calls' },
-  { key: 'followups', label: 'Follow-ups' },
-  { key: 'clients', label: 'Clients' },
-  { key: 'loads', label: 'Loads' },
-  { key: 'trucks', label: 'Trucks' },
-  { key: 'drivers', label: 'Drivers' },
-  { key: 'brokers', label: 'Brokers' },
-  { key: 'deals', label: 'Deals & Sales' },
-  { key: 'coldcallers', label: 'Cold Callers' },
-  { key: 'revenue', label: 'Revenue' },
-  { key: 'timelogs', label: 'Time logs' },
-  { key: 'tasks', label: 'Tasks' },
-  { key: 'teamchat', label: 'Team chat' },
-  { key: 'messages', label: 'Legacy messages' },
-  { key: 'audit', label: 'Audit log' },
-  { key: 'updates', label: 'Team updates' },
-  { key: 'payroll', label: 'Payroll & Bonuses' },
-  { key: 'settings', label: 'Settings' },
-]
+import { canAccessAdminTab, canUseGlobalSearch, getAdminTabs } from '../utils/navigation'
+import { useGuardedTab } from '../hooks/useGuardedTab'
 
 export default function AdminDashboard({ user, onLogout }) {
   const [tab, setTab] = useState('overview')
   const [timelogs, setTimelogs] = useState([])
   const [employees, setEmployees] = useState([])
   const [selectedEmployee, setSelectedEmployee] = useState(null)
+
+  const tabs = useMemo(() => getAdminTabs(user), [user])
+  useGuardedTab(tab, tabs.map((t) => t.key), setTab)
+
+  function guard(key, content) {
+    if (tab !== key || !canAccessAdminTab(user, key)) return null
+    return content
+  }
 
   usePresenceHeartbeat(user.id)
 
@@ -90,19 +74,23 @@ export default function AdminDashboard({ user, onLogout }) {
   }
 
   return (
-    <div className="dashboard-shell">
-      <Sidebar user={user} tabs={TABS} active={tab} onSelect={setTab} onLogout={onLogout} />
-      <div className="dashboard-main">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>
-            Admin — {user.full_name.split(' ')[0]}
-          </h2>
-          <NotificationCenter employeeId={user.id} />
-        </div>
+    <DashboardLayout
+      user={user}
+      tabs={tabs}
+      activeTab={tab}
+      onSelectTab={setTab}
+      onLogout={onLogout}
+      topBarExtra={<NotificationCenter employeeId={user.id} />}
+    >
+        <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>
+          Admin — {user.full_name.split(' ')[0]}
+        </h2>
 
-        <GlobalSearch callerId={user.id} onNavigate={onGlobalNavigate} />
+        {canUseGlobalSearch(user) && (
+          <GlobalSearch callerId={user.id} onNavigate={onGlobalNavigate} />
+        )}
 
-        {tab === 'overview' && (
+        {guard('overview', (
           <>
             <AdminOverviewStats adminId={user.id} />
             <div className="dashboard-grid" style={{ marginTop: '1.5rem' }}>
@@ -132,21 +120,21 @@ export default function AdminDashboard({ user, onLogout }) {
               <TeamPulse adminId={user.id} employees={employees} onSelectEmployee={openEmployeeDetail} />
             </div>
           </>
-        )}
+        ))}
 
-        {tab === 'control' && <AdminControlCenter onSelectTab={setTab} />}
+        {guard('control', <AdminControlCenter user={user} onSelectTab={setTab} />)}
 
-        {tab === 'employees' && <EmployeeManager adminId={user.id} onSelectEmployee={openEmployeeDetail} />}
+        {guard('employees', <EmployeeManager adminId={user.id} onSelectEmployee={openEmployeeDetail} />)}
 
-        {tab === 'employeeDetail' && selectedEmployee && (
+        {tab === 'employeeDetail' && selectedEmployee && canAccessAdminTab(user, 'employeeDetail') && (
           <AdminEmployeeDetail adminId={user.id} employee={selectedEmployee} onBack={() => setTab('employees')} />
         )}
 
-        {tab === 'leads' && <LeadsPanel callerId={user.id} employees={employees} />}
-        {tab === 'calls' && <CallsPanel callerId={user.id} />}
-        {tab === 'followups' && <FollowUpsPanel callerId={user.id} />}
+        {guard('leads', <LeadsPanel callerId={user.id} employees={employees} />)}
+        {guard('calls', <CallsPanel callerId={user.id} />)}
+        {guard('followups', <FollowUpsPanel callerId={user.id} />)}
 
-        {tab === 'clients' && (
+        {guard('clients', (
           <CrudModule
             title="Clients"
             callerId={user.id}
@@ -167,9 +155,9 @@ export default function AdminDashboard({ user, onLogout }) {
               { key: 'dispatcher_name', label: 'Dispatcher' },
             ]}
           />
-        )}
+        ))}
 
-        {tab === 'loads' && (
+        {guard('loads', (
           <CrudModule
             title="Load management"
             callerId={user.id}
@@ -190,9 +178,9 @@ export default function AdminDashboard({ user, onLogout }) {
               { key: 'rate', label: 'Rate' },
             ]}
           />
-        )}
+        ))}
 
-        {tab === 'trucks' && (
+        {guard('trucks', (
           <CrudModule
             title="Trucks (operations)"
             callerId={user.id}
@@ -210,9 +198,9 @@ export default function AdminDashboard({ user, onLogout }) {
               { key: 'current_location', label: 'Location' },
             ]}
           />
-        )}
+        ))}
 
-        {tab === 'drivers' && (
+        {guard('drivers', (
           <CrudModule
             title="Drivers"
             callerId={user.id}
@@ -230,9 +218,9 @@ export default function AdminDashboard({ user, onLogout }) {
               { key: 'status', label: 'Status' },
             ]}
           />
-        )}
+        ))}
 
-        {tab === 'brokers' && (
+        {guard('brokers', (
           <CrudModule
             title="Brokers"
             callerId={user.id}
@@ -250,14 +238,14 @@ export default function AdminDashboard({ user, onLogout }) {
               { key: 'phone', label: 'Phone' },
             ]}
           />
-        )}
+        ))}
 
-        {tab === 'deals' && <AdminDeals adminId={user.id} />}
-        {tab === 'coldcallers' && <AdminColdCallers adminId={user.id} employees={employees} />}
-        {tab === 'revenue' && <RevenuePanel adminId={user.id} />}
-        {tab === 'tasks' && <TasksPanel callerId={user.id} />}
+        {guard('deals', <AdminDeals adminId={user.id} />)}
+        {guard('coldcallers', <AdminColdCallers adminId={user.id} employees={employees} />)}
+        {guard('revenue', <RevenuePanel adminId={user.id} />)}
+        {guard('tasks', <TasksPanel callerId={user.id} />)}
 
-        {tab === 'timelogs' && (
+        {guard('timelogs', (
           <div style={{ maxWidth: 820 }}>
             <AdminTimeControl adminId={user.id} onDone={loadTimelogs} />
             <div className="card">
@@ -278,30 +266,25 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </div>
           </div>
-        )}
+        ))}
 
-        {tab === 'teamchat' && <TeamChatPanel employeeId={user.id} isAdmin employees={employees} />}
-        {tab === 'messages' && <AdminMessaging adminId={user.id} employees={employees} />}
-        {tab === 'audit' && <AdminAuditLog adminId={user.id} />}
+        {guard('teamchat', <TeamChatPanel employeeId={user.id} isAdmin employees={employees} />)}
+        {guard('messages', <AdminMessaging adminId={user.id} employees={employees} />)}
+        {guard('audit', <AdminAuditLog adminId={user.id} />)}
 
-        {tab === 'updates' && (
+        {guard('updates', (
           <div style={{ maxWidth: 640 }}>
             <UpdatesFeed employeeId={user.id} />
           </div>
-        )}
+        ))}
 
-        {tab === 'payroll' && <AdminPayroll adminId={user.id} employees={employees} />}
+        {guard('payroll', <AdminPayroll adminId={user.id} employees={employees} />)}
 
-        {tab === 'settings' && (
-          <div style={{ maxWidth: 480, display: 'grid', gap: '1.5rem' }}>
-            <div className="card">
-              <h3 className="card-title">Appearance</h3>
-              <ThemeToggle />
-            </div>
+        {guard('settings', (
+          <div style={{ maxWidth: 480 }}>
             <ChangePasswordCard adminId={user.id} />
           </div>
-        )}
-      </div>
-    </div>
+        ))}
+    </DashboardLayout>
   )
 }

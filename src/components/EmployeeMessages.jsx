@@ -8,6 +8,19 @@ export default function EmployeeMessages({ employeeId, messages, newIds, onSent 
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
+  async function handleEdit(m) {
+    if (!m.is_mine) return
+    const newBody = window.prompt('Edit your message:', m.body || '')
+    if (!newBody || newBody === m.body) return
+    const { data } = await supabase.rpc('edit_my_message', {
+      p_employee_id: employeeId,
+      p_message_id: m.id,
+      p_new_body: newBody,
+    })
+    if (!data?.success) alert('Could not edit. Run migration 004 on Supabase.')
+    else onSent && onSent()
+  }
+
   async function handleSend() {
     setError('')
     if (!body.trim() && !image) {
@@ -81,7 +94,12 @@ export default function EmployeeMessages({ employeeId, messages, newIds, onSent 
               </span>
               <span>{new Date(m.created_at).toLocaleString()}</span>
             </div>
-            {m.body && <div style={{ marginTop: 6 }}>{m.body}</div>}
+            {m.body && <div style={{ marginTop: 6 }}>{m.body}{m.edited_at ? ' (edited)' : ''}</div>}
+            {m.is_mine && (
+              <button type="button" className="btn-ghost msg-action-btn" style={{ marginTop: 6 }} onClick={() => handleEdit(m)}>
+                Edit
+              </button>
+            )}
             {m.image_data && (
               <a href={m.image_data} target="_blank" rel="noreferrer">
                 <img src={m.image_data} alt="Attachment" style={{ marginTop: 8, maxWidth: 220, maxHeight: 220, borderRadius: 8, border: '1px solid var(--border-soft)', display: 'block' }} />

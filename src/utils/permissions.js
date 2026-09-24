@@ -12,7 +12,14 @@ export const ACCESS_ROLES = [
 
 export function resolveAccessRole(user) {
   if (user?.role === 'admin') return 'admin'
-  return user?.access_role || user?.department || 'employee'
+  const explicit = user?.access_role
+  if (explicit && explicit !== 'employee') return explicit
+  const dept = user?.department
+  if (dept === 'cold_caller') return 'cold_caller'
+  if (dept === 'dispatcher') return 'dispatcher'
+  if (dept === 'team_leader') return 'team_leader'
+  if (dept === 'operations_manager') return 'manager'
+  return explicit || 'employee'
 }
 
 export function canManageAllLeads(role) {
